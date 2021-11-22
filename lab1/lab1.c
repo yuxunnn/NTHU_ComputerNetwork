@@ -49,6 +49,7 @@ int main(void) {
     snprintf(request_message, REQUESTLEN,
              "GET /%s HTTP/1.1\r\n"
              "Host: %s\r\n"
+			 "Connection: close\r\n"
              "\r\n",
              webpage, hostname);
     // Create socket
