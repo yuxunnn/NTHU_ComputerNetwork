@@ -16,7 +16,7 @@
 #define HYPERLINKLEN 105
 #define PORTNUM 80
 
-void hostname_to_IP(char *, char *);
+int hostname_to_IP(char *, char *);
 
 int main(void) {
     char *URL = calloc(URLLEN, sizeof(char));
@@ -49,7 +49,9 @@ int main(void) {
     webpage = strtok(NULL, "");
 
     // Convert hostname to IP
-    hostname_to_IP(hostname, server_ip);
+    if (hostname_to_IP(hostname, server_ip) < 0) {
+        return -1;
+    }
 
     // Format request_message
     snprintf(request_message, REQUESTLEN,
@@ -96,17 +98,19 @@ int main(void) {
     return 0;
 }
 
-void hostname_to_IP(char *hostname, char *ip) {
+int hostname_to_IP(char *hostname, char *ip) {
     struct hostent *he;
     struct in_addr **addr_list;
 
     if ((he = gethostbyname(hostname)) == NULL) {
         herror("gethostbyname");
-        return;
+        return -1;
     }
 
     addr_list = (struct in_addr **)he->h_addr_list;
     strcpy(ip, inet_ntoa(*addr_list[0]));
+
+    return 0;
 }
 
 // can.cs.nthu.edu.tw/index.php
