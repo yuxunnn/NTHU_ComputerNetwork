@@ -12,7 +12,7 @@
 #define HOSTNAMELEN 105
 #define WEBPAGELEN 105
 #define REQUESTLEN 1024
-#define RESPONSELEN 8192
+#define RESPONSELEN 10005
 #define HYPERLINKLEN 105
 #define PORTNUM 80
 
@@ -47,7 +47,6 @@ int main(void) {
     }
     hostname = strtok(URL, "/");
     webpage = strtok(NULL, "");
-
     // Convert hostname to IP
     if (hostname_to_IP(hostname, server_ip) < 0) {
         return -1;
@@ -59,7 +58,7 @@ int main(void) {
              "Host: %s\r\n"
              "Connection: close\r\n"
              "\r\n",
-             webpage, hostname);
+             (webpage == NULL) ? "" : webpage, hostname);
     // Create socket
     client_socket = socket(PF_INET, SOCK_STREAM, 0);
     serverAddr.sin_family = AF_INET;
@@ -88,7 +87,6 @@ int main(void) {
         match_pos[hyper_count++] = response_message;
         response_message = strstr(response_message + strlen(target), target_ptr);
     }
-
     // Print the hyperlinks at match positions
     for (int i = 0; i < hyper_count; i++) {
         hyperlink = strtok(match_pos[i] + strlen(target), "\"");
