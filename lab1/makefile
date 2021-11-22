@@ -9,7 +9,7 @@ all: $(O_FILES)
 	$(CC) -o $(EXE) $(O_FILES)
 
 %.o: %.c
-	$(CC) -c $^ -o $@
+	$(CC) -c $^
 
 clean:
 	rm -rf $(O_FILES) $(EXE)
