@@ -51,10 +51,8 @@ int main(void) {
              "Host: %s\r\n"
              "\r\n",
              webpage, hostname);
-
     // Create socket
     client_socket = socket(PF_INET, SOCK_STREAM, 0);
-
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(PORTNUM);
     serverAddr.sin_addr.s_addr = inet_addr(server_ip);
@@ -109,3 +107,5 @@ int hostname_to_IP(char *hostname, char *ip) {
 
     return 1;
 }
+
+// can.cs.nthu.edu.tw/index.php
