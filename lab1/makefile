@@ -6,10 +6,10 @@ O_FILES		:= lab1.o
 .PHONY: all
 
 all: $(O_FILES)
-	$(CC) -o $(EXE) $(O_FILES)
+	@$(CC) -o $(EXE) $(O_FILES)
 
-%.o: %.c
-	$(CC) -c $^
+%.o:
+	@$(CC) -c $(C_FILES)
 
 clean:
-	rm -rf $(O_FILES) $(EXE)
+	@rm -rf $(O_FILES) $(EXE)
