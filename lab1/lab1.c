@@ -16,7 +16,7 @@
 #define HYPERLINKLEN 105
 #define PORTNUM 80
 
-int hostname_to_IP(char *, char *);
+void hostname_to_IP(char *, char *);
 
 int main(void) {
     char *URL = calloc(URLLEN, sizeof(char));
@@ -74,7 +74,7 @@ int main(void) {
     // Receive response
     printf("socket: Start read the response\n");
     recv(client_socket, response_message, RESPONSELEN, 0);
-    printf("%s\n", response_message);
+
     // Read the response
     printf("socket: Finish read to buffer\n");
     printf("======== Hyperlinks ========\n");
@@ -96,23 +96,17 @@ int main(void) {
     return 0;
 }
 
-int hostname_to_IP(char *hostname, char *ip) {
+void hostname_to_IP(char *hostname, char *ip) {
     struct hostent *he;
     struct in_addr **addr_list;
 
     if ((he = gethostbyname(hostname)) == NULL) {
         herror("gethostbyname");
-        return 1;
+        return;
     }
 
     addr_list = (struct in_addr **)he->h_addr_list;
-
-    for (int i = 0; addr_list[i] != NULL; i++) {
-        strcpy(ip, inet_ntoa(*addr_list[i]));
-        return 0;
-    }
-
-    return 1;
+    strcpy(ip, inet_ntoa(*addr_list[0]));
 }
 
 // can.cs.nthu.edu.tw/index.php
