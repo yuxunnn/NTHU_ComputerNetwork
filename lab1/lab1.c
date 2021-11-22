@@ -39,8 +39,14 @@ int main(void) {
     scanf("%s", URL);
 
     // Split URL into (hostname + webpage)
+    if (strncmp(URL, "http://", 7) == 0) {
+        URL = &URL[7];
+    }
+    if (strncmp(URL, "https://", 8) == 0) {
+        URL = &URL[8];
+    }
     hostname = strtok(URL, "/");
-    webpage = strtok(NULL, "/");
+    webpage = strtok(NULL, "");
 
     // Convert hostname to IP
     hostname_to_IP(hostname, server_ip);
@@ -49,7 +55,7 @@ int main(void) {
     snprintf(request_message, REQUESTLEN,
              "GET /%s HTTP/1.1\r\n"
              "Host: %s\r\n"
-			 "Connection: close\r\n"
+             "Connection: close\r\n"
              "\r\n",
              webpage, hostname);
     // Create socket
@@ -68,7 +74,7 @@ int main(void) {
     // Receive response
     printf("socket: Start read the response\n");
     recv(client_socket, response_message, RESPONSELEN, 0);
-
+    printf("%s\n", response_message);
     // Read the response
     printf("socket: Finish read to buffer\n");
     printf("======== Hyperlinks ========\n");
