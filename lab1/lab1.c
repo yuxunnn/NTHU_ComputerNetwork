@@ -80,7 +80,11 @@ int main(void) {
 
     // Receive response
     printf("socket: Start read the response\n");
-    recv(client_socket, response_message, RESPONSELEN, 0);
+    while (1) {
+        char buffer[1024] = "";
+        if (recv(client_socket, buffer, 1024, 0) <= 0) break;
+        strncat(response_message, buffer, 1024);
+    }
 
     // Read the response
     printf("socket: Finish read to buffer\n");
