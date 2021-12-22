@@ -54,8 +54,7 @@ time_t t1, t2;
 //=====================
 // Simulate packet loss
 //=====================
-int isLoss(double prob)
-{
+int isLoss(double prob){
     double thres = prob * RAND_MAX;
     
     if(prob >= 1)
@@ -66,8 +65,7 @@ int isLoss(double prob)
 //==================================
 // You should complete this cunction
 //==================================
-int recvFile(FILE *fd)
-{
+int recvFile(FILE *fd){
 	printf("FILE_EXISTS\n");
 
 	char* str;
@@ -90,8 +88,7 @@ int recvFile(FILE *fd)
 	int index=0;
 	int receive_packet=0;
 	memset(snd_pkt.data, '\0', sizeof(snd_pkt.data));
-	while(1) 
-	{
+	while(1) {
 		//=======================
 		// Simulation packet loss
 		//=======================
@@ -103,13 +100,19 @@ int recvFile(FILE *fd)
 		//==============================================
 		// Actually receive packet and write into buffer
 		//==============================================
-		
+		if (recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&info, (socklen_t *)&len) == -1) {
+			printf("Fail to receive packet\n");
+			break;
+		}
+		strncat(buffer, rcv_pkt.data, 1024);
 		
 		
 		//==============================================
 		// Write buffer into file if is_last flag is set
 		//==============================================
-		
+		if (rcv_pkt.header.is_last){
+			fwrite(fd, buffer);
+		}
 
 
 		//====================
@@ -121,15 +124,13 @@ int recvFile(FILE *fd)
 	return 0;
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]){
 	//==============
 	// Create socket
 	//==============
 	//int sockfd = 0;
 	sockfd = socket(AF_INET , SOCK_DGRAM , 0);
-	if (sockfd == -1)
-	{
+	if (sockfd == -1){
 		printf("Fail to create a socket.");
 	}
 
@@ -167,21 +168,17 @@ int main(int argc, char *argv[])
 
 	printf("Waiting for a commands...\n");
 	getchar();
-	while(fgets(snd_pkt.data, 30, stdin)) 
-	{
+	while(fgets(snd_pkt.data, 30, stdin)) {
         
         // ================================
         // command "exit": close the client
         // ================================
-		if(strncmp(snd_pkt.data, "exit", 4) == 0) 
-		{
+		if(strncmp(snd_pkt.data, "exit", 4) == 0) {
             break;
         // ==============================================================
         // command "download filename": download the file from the server
         // ==============================================================
-        }
-		else if(strncmp(snd_pkt.data, "download", 8) == 0) 
-		{
+        }else if(strncmp(snd_pkt.data, "download", 8) == 0) {
 			snd_pkt.header.seq_num = 0;
 			snd_pkt.header.ack_num = 0;
 			snd_pkt.header.is_last = 1;
@@ -191,8 +188,7 @@ int main(int argc, char *argv[])
 			//========================
 			// Send filename to server
 			//========================
-			if ((numbytes = sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&info, len)) == -1) 
-			{
+			if ((numbytes = sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&info, len)) == -1) {
 				perror("error");
 				return 0;
 			}
@@ -200,8 +196,7 @@ int main(int argc, char *argv[])
 			//=========================================
 			// Get server response if file exist or not
 			//=========================================
-			if ((numbytes = recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&info, (socklen_t *)&len)) == -1)
-			{
+			if ((numbytes = recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&info, (socklen_t *)&len)) == -1){
 				printf("recvfrom error\n");
 				return 0;
 			}	
@@ -211,24 +206,20 @@ int main(int argc, char *argv[])
 			//====================
 			// File does not exist
 			//====================
-			if(strcmp(rcv_pkt.data,"FILE_NOT_EXISTS") == 0) 
-			{
+			if(strcmp(rcv_pkt.data,"FILE_NOT_EXISTS") == 0) {
 				printf("FILE_NOT_EXISTS\n");
 			} 
 			//==========================
 			// File exists, receive file
 			//==========================
-			else if(strcmp(rcv_pkt.data,"FILE_EXISTS") == 0) 
-			{
+			else if(strcmp(rcv_pkt.data,"FILE_EXISTS") == 0) {
 			    t1=time(NULL);
 				recvFile(fd);
 				t2=time(NULL);
 				printf("Total cost %ld secs\n",t2-t1);
 			}	
-			
-		}
-		else 
-		{
+		
+		}else {
 			printf("Illegal command\n");	
 		}
         

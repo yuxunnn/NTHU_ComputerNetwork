@@ -82,8 +82,7 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
  * checking timeout and receive client ack.
  * 
  ***************************************************/
-void* receive_thread()
-{
+void* receive_thread(){
 	//--------------------------------------
 	// Checking timeout & Receive client ack
 	//--------------------------------------
@@ -99,8 +98,7 @@ void* receive_thread()
 //------------------------------
 // Bonus part for timeout_thread
 //------------------------------
-void* timeout_thread()
-{
+void* timeout_thread(){
 	//------------------------------------------
 	// Keep the thread alive not to umcomment it
 	//------------------------------------------
@@ -111,16 +109,14 @@ void* timeout_thread()
 // You should complete this function
 //==================================
 // Send file function, it call receive_thread function at the first time.
-int sendFile(FILE *fd)
-{	
+int sendFile(FILE *fd){	
 	int filesize=ftell(fd);
 	//----------------------------------------------------------------
 	// Bonus part for declare timeout threads if you need bonus point,
 	// umcomment it and manage the thread by youself
 	//----------------------------------------------------------------
 	// At the first time, we need to create thread.
-	if(!first_time_create_thread)
-	{
+	if(!first_time_create_thread){
 		first_time_create_thread=1;
 		//pthread_create(&th1, NULL, receive_thread, NULL);
 		//pthread_create(&th2, NULL, timeout_process, NULL);
@@ -153,15 +149,13 @@ int sendFile(FILE *fd)
 	return 0;
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]){
 	//===========================
 	// argv[1] is for server port
 	//===========================
 	sockfd = socket(AF_INET , SOCK_DGRAM , 0);
 
-	if (sockfd == -1)
-	{
+	if (sockfd == -1){
 		printf("Fail to create a socket.");
 	}
 	//=======================
@@ -178,8 +172,7 @@ int main(int argc, char *argv[])
 	//================
 	// Bind the socket
 	//================	
-	if(bind(sockfd, (struct sockaddr *)&info, sizeof(info)) == -1)
-	{
+	if(bind(sockfd, (struct sockaddr *)&info, sizeof(info)) == -1){
 		perror("server_sockfd bind failed: ");
 		return 0;
 	}
@@ -201,8 +194,7 @@ int main(int argc, char *argv[])
 	printf("Server is listening on port %d\n",port);
 	printf("==============\n");
 
-	while(1)
-	{
+	while(1){
 		//=========================
 		// Initialization parameter
 		//=========================
@@ -213,8 +205,7 @@ int main(int argc, char *argv[])
 		
 		printf("server waiting.... \n");
 		char *str;
-		while ((recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&client_info, (socklen_t *)&len)) != -1)
-		{
+		while ((recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&client_info, (socklen_t *)&len)) != -1){
 			//In client, we set is_last 1 to comfirm server get client's first message.
 			if(rcv_pkt.header.isLast == 1)
 				break;
@@ -226,23 +217,20 @@ int main(int argc, char *argv[])
 		// command "download filename": download the file from the server
 		// and then check if filename is exist
 		//===============================================================
-		if(strcmp(str, "download") == 0) 
-		{
+		if(strcmp(str, "download") == 0) {
 			str = strtok(NULL, " \n");
 			printf("filename is %s\n",str);
 			//===================
 			// if file not exists 
 			//===================
-			if((fd = fopen(str, "rb")) == NULL) 
-			{    
+			if((fd = fopen(str, "rb")) == NULL) {    
 				//=======================================
 				// Send FILE_NOT_EXISTS msg to the client
 				//=======================================
 				printf("FILE_NOT_EXISTS\n");
                 		strcpy(snd_pkt.data, "FILE_NOT_EXISTS");
 				int numbytes;
-				if ((numbytes = sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&client_info, len)) == -1) 
-				{
+				if ((numbytes = sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&client_info, len)) == -1) {
 					printf("sendto error\n");
 					return 0;
 				}
@@ -251,8 +239,7 @@ int main(int argc, char *argv[])
 			//==================
 			// else, file exists 
 			//==================
-			else 
-			{
+			else {
 				fseek(fd,0,SEEK_END);
                 		printf("FILE_EXISTS\n");
 				strcpy(snd_pkt.data, "FILE_EXISTS");
@@ -262,8 +249,7 @@ int main(int argc, char *argv[])
 				// Send FILE_EXIST msg to the client
 				//==================================
 				int numbytes;
-				if ((numbytes = sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&client_info, len)) == -1) 
-				{
+				if ((numbytes = sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&client_info, len)) == -1) {
 					printf("sendto error\n");
 					return 0;
 				}
@@ -282,9 +268,7 @@ int main(int argc, char *argv[])
 				sendFile(fd);
 				
 			}
-		}
-		else 
-		{
+		}else {
 			printf("Illegal request!\n");   
 		}
 	}
