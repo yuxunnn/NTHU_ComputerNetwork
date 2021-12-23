@@ -128,21 +128,42 @@ int sendFile(FILE *fd){
 	 * checking timeout and receive client ack.
 	 * 
 	 ************************************************/
+	int seq_number = 0;
+	fseek(fd, 0, SEEK_SET);
+	snd_pkt.header.isLast = 0;
+	clock_t sentTime;
 
+	while(filesize > 0){
+		int readSize = fread(snd_pkt.data, 1, 1024, fd);	
 	//==========================
 	// Send video data to client
 	//==========================
-
-	
+		sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&client_info, len);
+		sentTime = (clock()*1000)/CLOCKS_PER_SEC;
 	//======================================
 	// Checking timeout & Receive client ack
 	//======================================	
-
-
+		while(1){
+			if (recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&info, (socklen_t *)&len) != -1){
+				if (rcv_pkt.header.ack_num == seq_number){
+					break;
+				}
+			}
+			if ((clock()*1000)/CLOCKS_PER_SEC - sentTime >= TIMEOUT){
+				sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&client_info, len);
+				sentTime = (clock()*1000)/CLOCKS_PER_SEC;
+			}
+		}
 	//=============================================
 	// Set is_last flag for the last part of packet
 	//=============================================
-
+		filesize -= readSize;
+		seq_number ++;
+		snd_pkt.header.seq_num = seq_number;
+		if (filesize <= 1024){
+			snd_pkt.header.isLast = 1;
+		}
+	}
 
 	printf("send file successfully\n");
 	fclose(fd);

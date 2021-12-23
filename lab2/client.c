@@ -82,45 +82,49 @@ int recvFile(FILE *fd){
 	
 	//FILE *fd;
 	fd = fopen(fileName, "wb");
+	fseek(fd, 0, SEEK_SET);
 	
 	printf("Receiving...\n");
-	char buffer[123431];
+	char buffer[123431] = ""; 
 	int index=0;
 	int receive_packet=0;
 	memset(snd_pkt.data, '\0', sizeof(snd_pkt.data));
-	while(1) {
+
+	while(!rcv_pkt.header.is_last) {
 		//=======================
 		// Simulation packet loss
 		//=======================
-		if(isLoss(0.5))
-		{
-			printf("\tOops! Packet loss!\n");
-			break;
-		}
+		// if(isLoss(0.5)){
+		// 	printf("\tOops! Packet loss!\n");
+		// 	break;
+		// }
 		//==============================================
 		// Actually receive packet and write into buffer
 		//==============================================
-		if (recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&info, (socklen_t *)&len) == -1) {
-			printf("Fail to receive packet\n");
-			break;
+		if (recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&info, (socklen_t *)&len) != -1){
+			if (rcv_pkt.header.seq_num == index){
+				receive_packet = rcv_pkt.header.seq_num;
+				index = receive_packet + 1;
+				fwrite(rcv_pkt.data, 1, 1024, fd);
+				// strncat(buffer, rcv_pkt.data, 1024);
+			}
 		}
-		strncat(buffer, rcv_pkt.data, 1024);
-		
-		
 		//==============================================
 		// Write buffer into file if is_last flag is set
 		//==============================================
-		if (rcv_pkt.header.is_last){
-			fwrite(fd, buffer);
-		}
-
-
+			// if (rcv_pkt.header.is_last){
+			// 	fwrite(buffer, 1, sizeof(buffer), fd);
+			// }
 		//====================
 		// Reply ack to server
 		//====================
-		
-
+		snd_pkt.header.ack_num = receive_packet;
+		if (sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&info, len) == -1){
+			printf("Send ack error\n");
+		}
 	}
+
+	fclose(fd);
 	return 0;
 }
 
