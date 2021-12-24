@@ -80,45 +80,42 @@ int recvFile(FILE *fd){
 	sprintf(fileName, "download_");
 	strcat(fileName, str);
 	
-	//FILE *fd;
 	fd = fopen(fileName, "wb");
 	fseek(fd, 0, SEEK_SET);
 	
 	printf("Receiving...\n");
 	char buffer[123431] = ""; 
-	int index=0;
-	int receive_packet=0;
+	int index = 0;
+	int receive_packet = 0;
 	memset(snd_pkt.data, '\0', sizeof(snd_pkt.data));
 
 	while(!rcv_pkt.header.is_last) {
 		//=======================
 		// Simulation packet loss
 		//=======================
-		// if(isLoss(0.5)){
-		// 	printf("\tOops! Packet loss!\n");
-		// 	break;
-		// }
+		if(isLoss(0.99)){
+			printf("\tOops! Packet loss!\n");
+			continue;
+		}
 		//==============================================
 		// Actually receive packet and write into buffer
 		//==============================================
 		if (recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&info, (socklen_t *)&len) != -1){
-			if (rcv_pkt.header.seq_num == index){
-				receive_packet = rcv_pkt.header.seq_num;
-				index = receive_packet + 1;
+			printf("\tReceive a packet seq_num = %d\n", rcv_pkt.header.seq_num);
+			if (rcv_pkt.header.seq_num == receive_packet){
+				snd_pkt.header.ack_num = receive_packet;
+				receive_packet ++;
 				fwrite(rcv_pkt.data, 1, 1024, fd);
-				// strncat(buffer, rcv_pkt.data, 1024);
 			}
 		}
 		//==============================================
 		// Write buffer into file if is_last flag is set
 		//==============================================
-			// if (rcv_pkt.header.is_last){
-			// 	fwrite(buffer, 1, sizeof(buffer), fd);
-			// }
+
+
 		//====================
 		// Reply ack to server
 		//====================
-		snd_pkt.header.ack_num = receive_packet;
 		if (sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&info, len) == -1){
 			printf("Send ack error\n");
 		}
@@ -149,9 +146,11 @@ int main(int argc, char *argv[]){
 	int server_port;
 
 	printf("give me an IP to send: ");
-	scanf("%s",server_ip);
+	// scanf("%s",server_ip);
+	server_ip = "127.0.0.1";
 	printf("server's's port? ");
-	scanf("%d",&server_port);
+	// scanf("%d",&server_port);
+	server_port = 9999;
 
 	//==================================
 	// Just test how to convert the type
@@ -171,9 +170,8 @@ int main(int argc, char *argv[]){
 	len = sizeof(info);
 
 	printf("Waiting for a commands...\n");
-	getchar();
+	//getchar();
 	while(fgets(snd_pkt.data, 30, stdin)) {
-        
         // ================================
         // command "exit": close the client
         // ================================

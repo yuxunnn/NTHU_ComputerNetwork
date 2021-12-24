@@ -9,7 +9,7 @@
 #include <arpa/inet.h> 
 #include <sys/wait.h>
 #include <pthread.h>
-#define TIMEOUT 100
+#define TIMEOUT 1
 /*****************notice**********************
  * 
  * You can follow the comment inside the code.
@@ -118,8 +118,8 @@ int sendFile(FILE *fd){
 	// At the first time, we need to create thread.
 	if(!first_time_create_thread){
 		first_time_create_thread=1;
-		//pthread_create(&th1, NULL, receive_thread, NULL);
-		//pthread_create(&th2, NULL, timeout_process, NULL);
+		// pthread_create(&th1, NULL, receive_thread, NULL);
+		// pthread_create(&th2, NULL, timeout_process, NULL);
 	}
 	/*******************notice************************
 	 * 
@@ -139,19 +139,22 @@ int sendFile(FILE *fd){
 	// Send video data to client
 	//==========================
 		sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&client_info, len);
+		printf("Send a pack seq_num = %d\n", snd_pkt.header.seq_num);
 		sentTime = (clock()*1000)/CLOCKS_PER_SEC;
 	//======================================
 	// Checking timeout & Receive client ack
 	//======================================	
 		while(1){
-			if (recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&info, (socklen_t *)&len) != -1){
+			if ((clock()*1000)/CLOCKS_PER_SEC - sentTime >= TIMEOUT){
+				sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&client_info, len);
+				printf("Timout! Resend packet!");
+				printf("Send a pack seq_num = %d\n", snd_pkt.header.seq_num);
+				sentTime = (clock()*1000)/CLOCKS_PER_SEC;
+			}else if (recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&info, (socklen_t *)&len) != -1){
+				printf("Receive a packet ack_num = %d\n", rcv_pkt.header.ack_num);
 				if (rcv_pkt.header.ack_num == seq_number){
 					break;
 				}
-			}
-			if ((clock()*1000)/CLOCKS_PER_SEC - sentTime >= TIMEOUT){
-				sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&client_info, len);
-				sentTime = (clock()*1000)/CLOCKS_PER_SEC;
 			}
 		}
 	//=============================================
