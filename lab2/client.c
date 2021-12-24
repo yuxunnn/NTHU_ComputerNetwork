@@ -112,10 +112,10 @@ int recvFile(FILE *fd){
 		// Write buffer into file if is_last flag is set
 		//==============================================
 
-
 		//====================
 		// Reply ack to server
 		//====================
+
 		if (sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&info, len) == -1){
 			printf("Send ack error\n");
 		}

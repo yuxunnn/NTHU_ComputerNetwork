@@ -9,7 +9,8 @@
 #include <arpa/inet.h> 
 #include <sys/wait.h>
 #include <pthread.h>
-#define TIMEOUT 1
+#define TIMEOUT 30
+#define WND_SIZE 4
 /*****************notice**********************
  * 
  * You can follow the comment inside the code.
@@ -55,6 +56,8 @@ socklen_t len;
 pthread_t th1,th2;
 int first_time_create_thread = 0;
 
+time_t sentTime;
+
 //---------------------------------------
 // Declare for critical section in bonus. 
 //---------------------------------------
@@ -82,23 +85,57 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
  * checking timeout and receive client ack.
  * 
  ***************************************************/
+
+int done;
 void* receive_thread(){
 	//--------------------------------------
 	// Checking timeout & Receive client ack
 	//--------------------------------------
-    	
+    // pthread_mutex_lock(&mutex);
+	while(1){
+		if (recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&info, (socklen_t *)&len) >= 0){
+			printf("Receive a packet ack_num = %d\n", rcv_pkt.header.ack_num);
+			if (rcv_pkt.header.ack_num == snd_pkt.header.seq_num){
+				done = 1;
+				pthread_exit(NULL);
+				return NULL;
+			}
+		}
+	}
 	
-	
+	// pthread_mutex_unlock(&mutex);
+	// return NULL;
 	//------------------------------------------
 	// Keep the thread alive not to umcomment it
 	//------------------------------------------
-	//pthread_exit(NULL);
+	// pthread_exit(NULL);
 }
 
 //------------------------------
 // Bonus part for timeout_thread
 //------------------------------
 void* timeout_thread(){
+    // pthread_mutex_lock(&mutex);
+
+	// clock_t sentTime;
+	//sentTime = (clock()*1000)/CLOCKS_PER_SEC;
+
+	while(1){
+
+		if (done == 1) {
+			pthread_exit(NULL);
+			return NULL;
+		}
+		if ((clock()*1000)/CLOCKS_PER_SEC - sentTime >= TIMEOUT){
+			sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&client_info, len);
+			printf("Timout! Resend packet!\n");
+			printf("Send a pack seq_num = %d\n", snd_pkt.header.seq_num);
+			sentTime = (clock()*1000)/CLOCKS_PER_SEC;
+		}
+	}
+
+	// pthread_mutex_unlock(&mutex);
+
 	//------------------------------------------
 	// Keep the thread alive not to umcomment it
 	//------------------------------------------
@@ -119,7 +156,7 @@ int sendFile(FILE *fd){
 	if(!first_time_create_thread){
 		first_time_create_thread=1;
 		// pthread_create(&th1, NULL, receive_thread, NULL);
-		// pthread_create(&th2, NULL, timeout_process, NULL);
+		// pthread_create(&th2, NULL, timeout_thread, NULL);
 	}
 	/*******************notice************************
 	 * 
@@ -131,7 +168,7 @@ int sendFile(FILE *fd){
 	int seq_number = 0;
 	fseek(fd, 0, SEEK_SET);
 	snd_pkt.header.isLast = 0;
-	clock_t sentTime;
+	// clock_t sentTime;
 
 	while(filesize > 0){
 		int readSize = fread(snd_pkt.data, 1, 1024, fd);	
@@ -144,19 +181,28 @@ int sendFile(FILE *fd){
 	//======================================
 	// Checking timeout & Receive client ack
 	//======================================	
-		while(1){
-			if ((clock()*1000)/CLOCKS_PER_SEC - sentTime >= TIMEOUT){
-				sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&client_info, len);
-				printf("Timout! Resend packet!");
-				printf("Send a pack seq_num = %d\n", snd_pkt.header.seq_num);
-				sentTime = (clock()*1000)/CLOCKS_PER_SEC;
-			}else if (recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&info, (socklen_t *)&len) != -1){
-				printf("Receive a packet ack_num = %d\n", rcv_pkt.header.ack_num);
-				if (rcv_pkt.header.ack_num == seq_number){
-					break;
-				}
-			}
-		}
+		// while(1){
+		// 	// if ((clock()*1000)/CLOCKS_PER_SEC - sentTime >= TIMEOUT){
+		// 	// 	sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&client_info, len);
+		// 	// 	printf("Timout! Resend packet!");
+		// 	// 	printf("Send a pack seq_num = %d\n", snd_pkt.header.seq_num);
+		// 	// 	sentTime = (clock()*1000)/CLOCKS_PER_SEC;
+		// 	// }
+		// 	// if (recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&info, (socklen_t *)&len) >= 0){
+		// 	// 	printf("Receive a packet ack_num = %d\n", rcv_pkt.header.ack_num);
+		// 	// 	if (rcv_pkt.header.ack_num == seq_number){
+		// 	// 		break;
+		// 	// 	}
+		// 	// }
+		// }
+		done = 0;
+		pthread_create(&th1, NULL, receive_thread, NULL);
+		pthread_create(&th2, NULL, timeout_thread, NULL);
+		pthread_join(th1, NULL);
+		pthread_join(th2, NULL);
+
+		// pthread_exit(th1);
+		// pthread_exit(th2);
 	//=============================================
 	// Set is_last flag for the last part of packet
 	//=============================================
@@ -167,7 +213,6 @@ int sendFile(FILE *fd){
 			snd_pkt.header.isLast = 1;
 		}
 	}
-
 	printf("send file successfully\n");
 	fclose(fd);
 	return 0;
