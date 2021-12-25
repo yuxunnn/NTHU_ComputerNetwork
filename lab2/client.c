@@ -89,18 +89,18 @@ int recvFile(FILE *fd){
 	int receive_packet = 0;
 	memset(snd_pkt.data, '\0', sizeof(snd_pkt.data));
 
-	while(!rcv_pkt.header.is_last) {
+	while(1) {
 		//=======================
 		// Simulation packet loss
 		//=======================
-		if(isLoss(0.99)){
-			printf("\tOops! Packet loss!\n");
-			continue;
-		}
 		//==============================================
 		// Actually receive packet and write into buffer
 		//==============================================
 		if (recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&info, (socklen_t *)&len) != -1){
+			if(isLoss(0.5)){
+				printf("\tOops! Packet loss!\n");
+				continue;
+			}
 			printf("\tReceive a packet seq_num = %d\n", rcv_pkt.header.seq_num);
 			if (rcv_pkt.header.seq_num == receive_packet){
 				snd_pkt.header.ack_num = receive_packet;
@@ -116,8 +116,15 @@ int recvFile(FILE *fd){
 		// Reply ack to server
 		//====================
 
-		if (sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&info, len) == -1){
-			printf("Send ack error\n");
+		if (isLoss(0.5)){
+			continue;
+		}
+
+		if (sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&info, len) != -1){
+			printf("\tSend a packet ack_num = %d\n", snd_pkt.header.ack_num);
+		}
+		if (rcv_pkt.header.is_last){
+			break;
 		}
 	}
 
@@ -146,11 +153,11 @@ int main(int argc, char *argv[]){
 	int server_port;
 
 	printf("give me an IP to send: ");
-	// scanf("%s",server_ip);
-	server_ip = "127.0.0.1";
+	scanf("%s",server_ip);
+	// server_ip = "127.0.0.1";
 	printf("server's's port? ");
-	// scanf("%d",&server_port);
-	server_port = 9999;
+	scanf("%d",&server_port);
+	// server_port = 9999;
 
 	//==================================
 	// Just test how to convert the type
@@ -170,7 +177,7 @@ int main(int argc, char *argv[]){
 	len = sizeof(info);
 
 	printf("Waiting for a commands...\n");
-	//getchar();
+	getchar();
 	while(fgets(snd_pkt.data, 30, stdin)) {
         // ================================
         // command "exit": close the client

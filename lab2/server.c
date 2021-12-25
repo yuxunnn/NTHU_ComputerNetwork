@@ -9,7 +9,7 @@
 #include <arpa/inet.h> 
 #include <sys/wait.h>
 #include <pthread.h>
-#define TIMEOUT 30
+#define TIMEOUT 100
 #define WND_SIZE 4
 /*****************notice**********************
  * 
@@ -91,19 +91,20 @@ void* receive_thread(){
 	//--------------------------------------
 	// Checking timeout & Receive client ack
 	//--------------------------------------
-    // pthread_mutex_lock(&mutex);
 	while(1){
+    	// pthread_mutex_lock(&mutex);
 		if (recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&info, (socklen_t *)&len) >= 0){
 			printf("Receive a packet ack_num = %d\n", rcv_pkt.header.ack_num);
 			if (rcv_pkt.header.ack_num == snd_pkt.header.seq_num){
 				done = 1;
+				// pthread_mutex_unlock(&mutex);
 				pthread_exit(NULL);
 				return NULL;
 			}
 		}
+		// pthread_mutex_unlock(&mutex);
 	}
 	
-	// pthread_mutex_unlock(&mutex);
 	// return NULL;
 	//------------------------------------------
 	// Keep the thread alive not to umcomment it
@@ -115,14 +116,15 @@ void* receive_thread(){
 // Bonus part for timeout_thread
 //------------------------------
 void* timeout_thread(){
-    // pthread_mutex_lock(&mutex);
 
 	// clock_t sentTime;
 	//sentTime = (clock()*1000)/CLOCKS_PER_SEC;
 
 	while(1){
+	    // pthread_mutex_lock(&mutex);
 
 		if (done == 1) {
+			// pthread_mutex_unlock(&mutex);
 			pthread_exit(NULL);
 			return NULL;
 		}
@@ -132,9 +134,9 @@ void* timeout_thread(){
 			printf("Send a pack seq_num = %d\n", snd_pkt.header.seq_num);
 			sentTime = (clock()*1000)/CLOCKS_PER_SEC;
 		}
+		// pthread_mutex_unlock(&mutex);
 	}
 
-	// pthread_mutex_unlock(&mutex);
 
 	//------------------------------------------
 	// Keep the thread alive not to umcomment it
