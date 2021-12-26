@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <sys/types.h> 
 #include <sys/socket.h>
@@ -86,26 +87,23 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
  * 
  ***************************************************/
 
-int done;
 void* receive_thread(){
 	//--------------------------------------
 	// Checking timeout & Receive client ack
 	//--------------------------------------
-	while(1){
-    	// pthread_mutex_lock(&mutex);
+	bool done = false;
+
+	while(!done){
 		if (recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&info, (socklen_t *)&len) >= 0){
+    		pthread_mutex_lock(&mutex);
 			printf("Receive a packet ack_num = %d\n", rcv_pkt.header.ack_num);
-			if (rcv_pkt.header.ack_num == snd_pkt.header.seq_num){
-				done = 1;
-				// pthread_mutex_unlock(&mutex);
-				pthread_exit(NULL);
-				return NULL;
-			}
+			done = (rcv_pkt.header.ack_num == snd_pkt.header.seq_num);
+			pthread_mutex_unlock(&mutex);
 		}
-		// pthread_mutex_unlock(&mutex);
 	}
+
+	pthread_exit(NULL);
 	
-	// return NULL;
 	//------------------------------------------
 	// Keep the thread alive not to umcomment it
 	//------------------------------------------
@@ -116,28 +114,22 @@ void* receive_thread(){
 // Bonus part for timeout_thread
 //------------------------------
 void* timeout_thread(){
+	
+	bool done = false;
 
-	// clock_t sentTime;
-	//sentTime = (clock()*1000)/CLOCKS_PER_SEC;
-
-	while(1){
-	    // pthread_mutex_lock(&mutex);
-
-		if (done == 1) {
-			// pthread_mutex_unlock(&mutex);
-			pthread_exit(NULL);
-			return NULL;
-		}
+	while(!done){
+	    pthread_mutex_lock(&mutex);
 		if ((clock()*1000)/CLOCKS_PER_SEC - sentTime >= TIMEOUT){
 			sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&client_info, len);
 			printf("Timout! Resend packet!\n");
 			printf("Send a pack seq_num = %d\n", snd_pkt.header.seq_num);
 			sentTime = (clock()*1000)/CLOCKS_PER_SEC;
 		}
-		// pthread_mutex_unlock(&mutex);
+		done = (rcv_pkt.header.ack_num == snd_pkt.header.seq_num);
+		pthread_mutex_unlock(&mutex);
 	}
 
-
+	pthread_exit(NULL);
 	//------------------------------------------
 	// Keep the thread alive not to umcomment it
 	//------------------------------------------
@@ -170,44 +162,31 @@ int sendFile(FILE *fd){
 	int seq_number = 0;
 	fseek(fd, 0, SEEK_SET);
 	snd_pkt.header.isLast = 0;
-	// clock_t sentTime;
 
 	while(filesize > 0){
 		int readSize = fread(snd_pkt.data, 1, 1024, fd);	
-	//==========================
-	// Send video data to client
-	//==========================
+
+		//==========================
+		// Send video data to client
+		//==========================
+
 		sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&client_info, len);
 		printf("Send a pack seq_num = %d\n", snd_pkt.header.seq_num);
 		sentTime = (clock()*1000)/CLOCKS_PER_SEC;
-	//======================================
-	// Checking timeout & Receive client ack
-	//======================================	
-		// while(1){
-		// 	// if ((clock()*1000)/CLOCKS_PER_SEC - sentTime >= TIMEOUT){
-		// 	// 	sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&client_info, len);
-		// 	// 	printf("Timout! Resend packet!");
-		// 	// 	printf("Send a pack seq_num = %d\n", snd_pkt.header.seq_num);
-		// 	// 	sentTime = (clock()*1000)/CLOCKS_PER_SEC;
-		// 	// }
-		// 	// if (recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&info, (socklen_t *)&len) >= 0){
-		// 	// 	printf("Receive a packet ack_num = %d\n", rcv_pkt.header.ack_num);
-		// 	// 	if (rcv_pkt.header.ack_num == seq_number){
-		// 	// 		break;
-		// 	// 	}
-		// 	// }
-		// }
-		done = 0;
+
+		//======================================
+		// Checking timeout & Receive client ack
+		//======================================	
+
 		pthread_create(&th1, NULL, receive_thread, NULL);
 		pthread_create(&th2, NULL, timeout_thread, NULL);
 		pthread_join(th1, NULL);
 		pthread_join(th2, NULL);
 
-		// pthread_exit(th1);
-		// pthread_exit(th2);
-	//=============================================
-	// Set is_last flag for the last part of packet
-	//=============================================
+		//=============================================
+		// Set is_last flag for the last part of packet
+		//=============================================
+
 		filesize -= readSize;
 		seq_number ++;
 		snd_pkt.header.seq_num = seq_number;

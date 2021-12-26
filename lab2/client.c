@@ -90,17 +90,17 @@ int recvFile(FILE *fd){
 	memset(snd_pkt.data, '\0', sizeof(snd_pkt.data));
 
 	while(1) {
-		//=======================
-		// Simulation packet loss
-		//=======================
-		//==============================================
-		// Actually receive packet and write into buffer
-		//==============================================
 		if (recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&info, (socklen_t *)&len) != -1){
+			//=======================
+			// Simulation packet loss
+			//=======================
 			if(isLoss(0.5)){
 				printf("\tOops! Packet loss!\n");
 				continue;
 			}
+			//==============================================
+			// Actually receive packet and write into buffer
+			//==============================================
 			printf("\tReceive a packet seq_num = %d\n", rcv_pkt.header.seq_num);
 			if (rcv_pkt.header.seq_num == receive_packet){
 				snd_pkt.header.ack_num = receive_packet;
@@ -115,14 +115,10 @@ int recvFile(FILE *fd){
 		//====================
 		// Reply ack to server
 		//====================
-
-		if (isLoss(0.5)){
-			continue;
-		}
-
-		if (sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&info, len) != -1){
-			printf("\tSend a packet ack_num = %d\n", snd_pkt.header.ack_num);
-		}
+		sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&info, len);
+		// if ( != -1){
+		// 	printf("\tSend a packet ack_num = %d\n", snd_pkt.header.ack_num);
+		// }
 		if (rcv_pkt.header.is_last){
 			break;
 		}
