@@ -91,18 +91,12 @@ void* receive_thread(){
 	//--------------------------------------
 	// Checking timeout & Receive client ack
 	//--------------------------------------
-	bool done = false;
 
-	while(!done){
-		if (recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&info, (socklen_t *)&len) >= 0){
-    		pthread_mutex_lock(&mutex);
-			printf("Receive a packet ack_num = %d\n", rcv_pkt.header.ack_num);
-			done = (rcv_pkt.header.ack_num == snd_pkt.header.seq_num);
-			pthread_mutex_unlock(&mutex);
-		}
+	while (recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&info, (socklen_t *)&len) != -1){
+		pthread_mutex_lock(&mutex);
+		printf("Receive a packet ack_num = %d\n", rcv_pkt.header.ack_num);
+		pthread_mutex_unlock(&mutex);
 	}
-
-	pthread_exit(NULL);
 	
 	//------------------------------------------
 	// Keep the thread alive not to umcomment it
@@ -114,22 +108,22 @@ void* receive_thread(){
 // Bonus part for timeout_thread
 //------------------------------
 void* timeout_thread(){
-	
-	bool done = false;
 
-	while(!done){
+	while(1){
 	    pthread_mutex_lock(&mutex);
+		if (rcv_pkt.header.ack_num == snd_pkt.header.seq_num){
+			pthread_mutex_unlock(&mutex);
+			pthread_exit(NULL);
+		}
+		pthread_mutex_unlock(&mutex);
 		if ((clock()*1000)/CLOCKS_PER_SEC - sentTime >= TIMEOUT){
 			sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&client_info, len);
 			printf("Timout! Resend packet!\n");
 			printf("Send a pack seq_num = %d\n", snd_pkt.header.seq_num);
 			sentTime = (clock()*1000)/CLOCKS_PER_SEC;
 		}
-		done = (rcv_pkt.header.ack_num == snd_pkt.header.seq_num);
-		pthread_mutex_unlock(&mutex);
 	}
 
-	pthread_exit(NULL);
 	//------------------------------------------
 	// Keep the thread alive not to umcomment it
 	//------------------------------------------
@@ -146,12 +140,6 @@ int sendFile(FILE *fd){
 	// Bonus part for declare timeout threads if you need bonus point,
 	// umcomment it and manage the thread by youself
 	//----------------------------------------------------------------
-	// At the first time, we need to create thread.
-	if(!first_time_create_thread){
-		first_time_create_thread=1;
-		// pthread_create(&th1, NULL, receive_thread, NULL);
-		// pthread_create(&th2, NULL, timeout_thread, NULL);
-	}
 	/*******************notice************************
 	 * 
 	 * In basic part, you should finish this function.
@@ -164,7 +152,16 @@ int sendFile(FILE *fd){
 	snd_pkt.header.isLast = 0;
 
 	while(filesize > 0){
-		int readSize = fread(snd_pkt.data, 1, 1024, fd);	
+		// At the first time, we need to create thread.
+		if(!first_time_create_thread){
+			first_time_create_thread = 1;
+			pthread_create(&th1, NULL, receive_thread, NULL);
+		}
+		//==========================
+		// Write data into send packet
+		//==========================
+
+		fread(snd_pkt.data, 1, 1024, fd);	
 
 		//==========================
 		// Send video data to client
@@ -178,22 +175,23 @@ int sendFile(FILE *fd){
 		// Checking timeout & Receive client ack
 		//======================================	
 
-		pthread_create(&th1, NULL, receive_thread, NULL);
 		pthread_create(&th2, NULL, timeout_thread, NULL);
-		pthread_join(th1, NULL);
 		pthread_join(th2, NULL);
 
 		//=============================================
 		// Set is_last flag for the last part of packet
 		//=============================================
 
-		filesize -= readSize;
+		filesize -= 1024;
 		seq_number ++;
 		snd_pkt.header.seq_num = seq_number;
 		if (filesize <= 1024){
 			snd_pkt.header.isLast = 1;
 		}
 	}
+	first_time_create_thread = 0;
+	pthread_cancel(th1);
+
 	printf("send file successfully\n");
 	fclose(fd);
 	return 0;
