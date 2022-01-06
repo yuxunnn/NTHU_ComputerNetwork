@@ -54,8 +54,11 @@ int sockfd;
 struct sockaddr_in info, client_info;
 Udp_pkt snd_pkt,rcv_pkt;
 socklen_t len;
-pthread_t th1,th2;
+
 int first_time_create_thread = 0;
+// pthread_t th1_rv, th2_rv, th3_rv, th4_rv;
+// pthread_t th1_tm, th2_tm, th3_tm, th4_tm;
+pthread_t th1, th2;
 
 time_t sentTime;
 
@@ -151,7 +154,7 @@ int sendFile(FILE *fd){
 	fseek(fd, 0, SEEK_SET);
 	snd_pkt.header.isLast = 0;
 
-	while(filesize > 0){
+	while(1){
 		// At the first time, we need to create thread.
 		if(!first_time_create_thread){
 			first_time_create_thread = 1;
@@ -161,7 +164,7 @@ int sendFile(FILE *fd){
 		// Write data into send packet
 		//==========================
 
-		fread(snd_pkt.data, 1, 1024, fd);	
+		fread(snd_pkt.data, 1, 1024, fd);
 
 		//==========================
 		// Send video data to client
@@ -174,17 +177,21 @@ int sendFile(FILE *fd){
 		//======================================
 		// Checking timeout & Receive client ack
 		//======================================	
-
 		pthread_create(&th2, NULL, timeout_thread, NULL);
 		pthread_join(th2, NULL);
+		
+		//======================================
+		// Checking Receive the last ack
+		//======================================
+		
+		if (rcv_pkt.header.isLast) break;
 
 		//=============================================
 		// Set is_last flag for the last part of packet
 		//=============================================
 
+		snd_pkt.header.seq_num = seq_number = seq_number + 1;
 		filesize -= 1024;
-		seq_number ++;
-		snd_pkt.header.seq_num = seq_number;
 		if (filesize <= 1024){
 			snd_pkt.header.isLast = 1;
 		}

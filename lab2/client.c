@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <time.h>
 #include <arpa/inet.h> 
+#define WND_SIZE 4
 
 /*****************notice**********************
  * 
@@ -50,6 +51,8 @@ Udp_pkt snd_pkt,rcv_pkt;
 struct sockaddr_in info, client_info;
 socklen_t len;
 time_t t1, t2;
+
+char temp_buffer[WND_SIZE][1024];
 
 //=====================
 // Simulate packet loss
@@ -104,21 +107,25 @@ int recvFile(FILE *fd){
 			printf("\tReceive a packet seq_num = %d\n", rcv_pkt.header.seq_num);
 			if (rcv_pkt.header.seq_num == receive_packet){
 				snd_pkt.header.ack_num = receive_packet;
+				snd_pkt.header.is_last = rcv_pkt.header.is_last;
 				receive_packet ++;
-				fwrite(rcv_pkt.data, 1, 1024, fd);
+				int recvSize = (123431-index < 1024) ? 123431 - index : 1024;
+				memcpy(&buffer[index], rcv_pkt.data, recvSize);
+				index += recvSize;
 			}
 		}
 		//==============================================
 		// Write buffer into file if is_last flag is set
 		//==============================================
 
+		if (rcv_pkt.header.is_last){
+			fwrite(buffer, 1, sizeof(buffer), fd);
+		}
+
 		//====================
 		// Reply ack to server
 		//====================
 		sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&info, len);
-		// if ( != -1){
-		// 	printf("\tSend a packet ack_num = %d\n", snd_pkt.header.ack_num);
-		// }
 		if (rcv_pkt.header.is_last){
 			break;
 		}
