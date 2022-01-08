@@ -97,7 +97,7 @@ void* receive_thread(){
 
 	while (recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr *)&info, (socklen_t *)&len) != -1){
 		pthread_mutex_lock(&mutex);
-		printf("Receive a packet ack_num = %d\n", rcv_pkt.header.ack_num);
+		printf("\tReceive a packet ack_num = %d\n", rcv_pkt.header.ack_num);
 		pthread_mutex_unlock(&mutex);
 	}
 	
@@ -120,9 +120,10 @@ void* timeout_thread(){
 		}
 		pthread_mutex_unlock(&mutex);
 		if ((clock()*1000)/CLOCKS_PER_SEC - sentTime >= TIMEOUT){
-			sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&client_info, len);
-			printf("Timout! Resend packet!\n");
-			printf("Send a pack seq_num = %d\n", snd_pkt.header.seq_num);
+			int numbytes = sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&client_info, len);
+			printf("\tTimout! Resend packet!\n");
+			printf("\tSend %d bytes\n", numbytes);
+			// printf("Send a pack seq_num = %d\n", snd_pkt.header.seq_num);
 			sentTime = (clock()*1000)/CLOCKS_PER_SEC;
 		}
 	}
@@ -170,8 +171,9 @@ int sendFile(FILE *fd){
 		// Send video data to client
 		//==========================
 
-		sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&client_info, len);
-		printf("Send a pack seq_num = %d\n", snd_pkt.header.seq_num);
+		int numbytes = sendto(sockfd, &snd_pkt, sizeof(snd_pkt), 0,(struct sockaddr *)&client_info, len);
+		printf("\tSend %d bytes\n", numbytes);
+		// printf("\tSend a pack seq_num = %d\n", snd_pkt.header.seq_num);
 		sentTime = (clock()*1000)/CLOCKS_PER_SEC;
 
 		//======================================

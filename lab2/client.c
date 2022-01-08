@@ -131,7 +131,9 @@ int recvFile(FILE *fd){
 		}
 	}
 
+	printf("client received finished\n");
 	fclose(fd);
+
 	return 0;
 }
 
